@@ -29,20 +29,9 @@ public class CustomerEventDao implements Closeable {
     }
 
     public void storeEvent(ConsistencyLevel consistencyLevel, CustomerEvent customerEvent) {
-        BoundStatement boundInsert = insertStatement.bind(customerEvent.getCustomerId(), customerEvent.getTime(), customerEvent.getEventType(), customerEvent.getStaffId(), customerEvent.getStaffId());
-        boundInsert.enableTracing();
-        boundInsert.setConsistencyLevel(consistencyLevel);
+        BoundStatement boundInsert = createBoundStatement(consistencyLevel, customerEvent);
         ResultSet execute = session.execute(boundInsert);
         logTraceInfo(execute.getExecutionInfo());
-    }
-
-    private void logTraceInfo(ExecutionInfo executionInfo) {
-        for (QueryTrace.Event event : executionInfo.getQueryTrace().getEvents()) {
-            LOGGER.debug("{}", event);
-        }
-
-        LOGGER.debug("Coordinator used {}", executionInfo.getQueryTrace().getCoordinator());
-        LOGGER.debug("Duration in microseconds {}", executionInfo.getQueryTrace().getDurationMicros());
     }
 
     public void storeEvents(ConsistencyLevel consistencyLevel, CustomerEvent... events) {
@@ -55,6 +44,15 @@ public class CustomerEventDao implements Closeable {
 
         ResultSet execute = session.execute(batchStatement);
         logTraceInfo(execute.getExecutionInfo());
+    }
+
+    private void logTraceInfo(ExecutionInfo executionInfo) {
+        for (QueryTrace.Event event : executionInfo.getQueryTrace().getEvents()) {
+            LOGGER.debug("{}", event);
+        }
+
+        LOGGER.debug("Coordinator used {}", executionInfo.getQueryTrace().getCoordinator());
+        LOGGER.debug("Duration in microseconds {}", executionInfo.getQueryTrace().getDurationMicros());
     }
 
     private BoundStatement createBoundStatement(ConsistencyLevel consistencyLevel, CustomerEvent customerEvent) {

@@ -29,7 +29,9 @@ public class CustomerEventDao implements Closeable {
     }
 
     public void storeEvent(ConsistencyLevel consistencyLevel, CustomerEvent customerEvent) {
-        BoundStatement boundInsert = createBoundStatement(consistencyLevel, customerEvent);
+        BoundStatement boundInsert = insertStatement.bind(customerEvent.getCustomerId(), customerEvent.getTime(), customerEvent.getEventType(), customerEvent.getStaffId(), customerEvent.getStaffId());
+        boundInsert.enableTracing();
+        boundInsert.setConsistencyLevel(consistencyLevel);
         ResultSet execute = session.execute(boundInsert);
         logTraceInfo(execute.getExecutionInfo());
     }
@@ -45,6 +47,27 @@ public class CustomerEventDao implements Closeable {
         ResultSet execute = session.execute(batchStatement);
         logTraceInfo(execute.getExecutionInfo());
     }
+
+    public void storeEvents(String customerId, ConsistencyLevel consistencyLevel, CustomerEvent... events) {
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        batchStatement.enableTracing();
+
+        for (CustomerEvent event : events) {
+            BoundStatement boundInsert = insertStatement.bind(
+                    customerId,
+                    event.getTime(),
+                    event.getEventType(),
+                    event.getStaffId(),
+                    event.getStaffId());
+            boundInsert.enableTracing();
+            boundInsert.setConsistencyLevel(consistencyLevel);
+            batchStatement.add(boundInsert);
+        }
+
+        ResultSet execute = session.execute(batchStatement);
+        logTraceInfo(execute.getExecutionInfo());
+    }
+
 
     private void logTraceInfo(ExecutionInfo executionInfo) {
         for (QueryTrace.Event event : executionInfo.getQueryTrace().getEvents()) {
